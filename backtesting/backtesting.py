@@ -1264,6 +1264,7 @@ class Backtest:
                  return_heatmap: bool = False,
                  return_optimization: bool = False,
                  random_state: Optional[int] = None,
+                 tqdm: Optional[Callable] = None,
                  **kwargs) -> Union[pd.Series,
                                     Tuple[pd.Series, pd.Series],
                                     Tuple[pd.Series, pd.Series, dict]]:
@@ -1386,6 +1387,9 @@ class Backtest:
                            if constraint(AttrDict(p)))
             return size
 
+        if tqdm is None:
+            tqdm = _tqdm
+
         def _optimize_grid() -> Union[pd.Series, Tuple[pd.Series, pd.Series]]:
             rand = default_rng(random_state).random
             grid_frac = (1 if max_tries is None else
@@ -1430,7 +1434,7 @@ class Backtest:
                     with ProcessPoolExecutor() as executor:
                         futures = [executor.submit(Backtest._mp_task, backtest_uuid, i)
                                    for i in range(len(param_batches))]
-                        for future in _tqdm(as_completed(futures), total=len(futures),
+                        for future in tqdm(as_completed(futures), total=len(futures),
                                             desc='Backtest.optimize'):
                             batch_index, values = future.result()
                             for value, params in zip(values, param_batches[batch_index]):
@@ -1439,7 +1443,7 @@ class Backtest:
                     if os.name == 'posix':
                         warnings.warn("For multiprocessing support in `Backtest.optimize()` "
                                       "set multiprocessing start method to 'fork'.")
-                    for batch_index in _tqdm(range(len(param_batches))):
+                    for batch_index in tqdm(range(len(param_batches))):
                         _, values = Backtest._mp_task(backtest_uuid, batch_index)
                         for value, params in zip(values, param_batches[batch_index]):
                             heatmap[tuple(params.values())] = value
@@ -1499,7 +1503,7 @@ class Backtest:
 
             # np.inf/np.nan breaks sklearn, np.finfo(float).max breaks skopt.plots.plot_objective
             INVALID = 1e300
-            progress = iter(_tqdm(repeat(None), total=max_tries, desc='Backtest.optimize'))
+            progress = iter(tqdm(repeat(None), total=max_tries, desc='Backtest.optimize'))
 
             @use_named_args(dimensions=dimensions)
             def objective_function(**params):
