@@ -1265,6 +1265,8 @@ class Backtest:
                  return_optimization: bool = False,
                  random_state: Optional[int] = None,
                  tqdm: Optional[Callable] = None,
+                 initializer: Optional[Callable] = None,
+                 initargs: Tuple = (),
                  **kwargs) -> Union[pd.Series,
                                     Tuple[pd.Series, pd.Series],
                                     Tuple[pd.Series, pd.Series, dict]]:
@@ -1431,7 +1433,7 @@ class Backtest:
                 # a pool of processes to compute results in parallel.
                 # Otherwise (i.e. on Windos), sequential computation will be "faster".
                 if mp.get_start_method(allow_none=False) == 'fork':
-                    with ProcessPoolExecutor() as executor:
+                    with ProcessPoolExecutor(initializer=initializer, initargs=initargs) as executor:
                         futures = [executor.submit(Backtest._mp_task, backtest_uuid, i)
                                    for i in range(len(param_batches))]
                         for future in tqdm(as_completed(futures), total=len(futures),
